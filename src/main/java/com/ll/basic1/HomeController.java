@@ -223,7 +223,18 @@ public class HomeController {
         return "삭제할 id가 존재하지 않습니다.";
     }
 
-
+    @GetMapping("/home/modifyPerson")
+    @ResponseBody
+    public String modify(@RequestParam int id,@RequestParam String name, @RequestParam int age){
+        for(Person p : people){
+            if(p.getId()==id) {
+                p.setName(name);
+                p.setAge(age);
+                return p.getId()+"번째 사람이 수정되었습니다.";
+            }
+        }
+        return "수정할 id가 존재하지 않습니다.";
+    }
 }
 
 class Car {

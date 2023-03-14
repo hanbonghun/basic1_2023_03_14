@@ -210,6 +210,20 @@ public class HomeController {
     public List<Person> people(){
         return people;
     }
+
+    @GetMapping("/home/removePerson")
+    @ResponseBody
+    public String remove(@RequestParam int id){
+        for(Person p : people){
+            if(p.getId()==id) {
+                people.remove(p);
+                return p.getId()+"번째 사람이 삭제되었습니다";
+            }
+        }
+        return "삭제할 id가 존재하지 않습니다.";
+    }
+
+
 }
 
 class Car {

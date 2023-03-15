@@ -1,13 +1,16 @@
-package com.ll.basic1;
+package com.ll.basic1.boundedContext.home.controller;
 
+import com.ll.basic1.boundedContext.member.entity.Member;
+import com.ll.basic1.boundedContext.member.service.MemberService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import jakarta.servlet.http.Cookie;
+import lombok.ToString;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
@@ -22,10 +25,13 @@ import java.util.*;
 public class HomeController {
     private int count;
     private List<Person> people;
+    // 필드 주입
+    @Autowired
+    private MemberService memberService;
 
     public HomeController() {
-        people = new ArrayList<>();
         count = -1;
+        people = new ArrayList<>();
     }
 
     // @GetMapping("/home/main") 의 의미
@@ -201,40 +207,62 @@ public class HomeController {
 
     @GetMapping("/home/addPerson")
     @ResponseBody
-    public String addPerson(@RequestParam String name, @RequestParam String age){
-        people.add(new Person(name, Integer.parseInt(age)));
-        return Person.num + "번째 사람이 추가되었습니다.";
+    public String addPerson(String name, int age) {
+        Person p = new Person(name, age);
+
+        System.out.println(p);
+
+        people.add(p);
+
+        return "%d번 사람이 추가되었습니다.".formatted(p.getId());
     }
 
     @GetMapping("/home/people")
     @ResponseBody
-    public List<Person> people(){
+    public List<Person> showPeople() {
         return people;
     }
 
     @GetMapping("/home/removePerson")
     @ResponseBody
-    public String remove(@RequestParam int id){
-        for(Person p : people){
-            if(p.getId()==id) {
-                people.remove(p);
-                return p.getId()+"번째 사람이 삭제되었습니다";
-            }
+    public String removePerson(int id) {
+        // person -> person.getId() == id
+        // 위 함수가 참인 엘리먼트(요소) 경우가 존재하면, 해당 요소를 삭제한다.
+        // removed 에는 삭제수행여부가 저장된다.
+        // 조건에 맞는걸 찾았고 삭제까지 되었다면 true, 아니면 false
+        boolean removed = people.removeIf(person -> person.getId() == id);
+
+        if (removed == false) {
+            return "%d번 사람이 존재하지 않습니다.".formatted(id);
         }
-        return "삭제할 id가 존재하지 않습니다.";
+
+        return "%d번 사람이 삭제되었습니다.".formatted(id);
     }
 
     @GetMapping("/home/modifyPerson")
     @ResponseBody
-    public String modify(@RequestParam int id,@RequestParam String name, @RequestParam int age){
-        for(Person p : people){
-            if(p.getId()==id) {
-                p.setName(name);
-                p.setAge(age);
-                return p.getId()+"번째 사람이 수정되었습니다.";
-            }
+    public String modifyPerson(int id, String name, int age) {
+        Person found = people
+                .stream()
+                .filter(p -> p.getId() == id)
+                .findFirst()
+                .orElse(null);
+
+        if (found == null) {
+            return "%d번 사람이 존재하지 않습니다.".formatted(id);
         }
-        return "수정할 id가 존재하지 않습니다.";
+
+        found.setName(name);
+        found.setAge(age);
+
+        return "%d번 사람이 수정되었습니다.".formatted(id);
+    }
+
+    @GetMapping("/home/reqAndResp")
+    @ResponseBody
+    public void showReqAndResp(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        int age = Integer.parseInt(req.getParameter("age"));
+        resp.getWriter().append("Hello, you are %d years old.".formatted(age));
     }
 
     @GetMapping("/home/cookie/increase")
@@ -261,6 +289,12 @@ public class HomeController {
 
         // 응답 본문
         return newCountInCookie;
+    }
+
+    @GetMapping("/home/user1")
+    @ResponseBody
+    public Member showUser1() {
+        return memberService.findByUsername("user1");
     }
 }
 
@@ -306,15 +340,21 @@ class CarV2 {
 
 @AllArgsConstructor
 @Getter
-@Setter
-class Person{
-    static int num;
-    private int id;
+@ToString
+class Person {
+    private static int lastId;
+    private final int id;
+    @Setter
     private String name;
+    @Setter
     private int age;
-    Person(String name, int age){
-        this.id = ++Person.num;
-        this.name =name;
-        this.age = age;
+
+
+    static {
+        lastId = 0;
+    }
+
+    Person(String name, int age) {
+        this(++lastId, name, age);
     }
 }
